@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/proxy"
 	trinoClient "github.com/trinodb/grafana-trino/pkg/trino/client"
 
 	"github.com/trinodb/grafana-trino/pkg/trino/models"
@@ -36,11 +37,17 @@ func Open(settings models.TrinoDatasourceSettings) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
 	}
+	// Wires the transport to dial through Grafana's secure SOCKS proxy (used by
+	// Grafana Cloud's Private Data Source Connect) when the datasource has it
+	// enabled. A true no-op otherwise. Must happen before any wrapping below, so
+	// it applies regardless of which auth method is configured.
+	if err := configureSecureSocksProxy(transport, settings.Opts.ProxyOptions); err != nil {
+		return nil, fmt.Errorf("failed to configure secure SOCKS proxy: %w", err)
+	}
+	client := &http.Client{Transport: transport}
 	if settings.TokenUrl != "" || settings.ClientId != "" || settings.ClientSecret != "" {
 		if settings.AccessToken != "" {
 			return nil, errors.New("access token must not be set within 'OAuth Trino Authentication' settings")
@@ -127,6 +134,14 @@ func buildTLSConfig(opts *httpclient.TLSOptions) (*tls.Config, error) {
 		Certificates:       clientCert,
 		RootCAs:            certPool,
 	}, nil
+}
+
+// configureSecureSocksProxy wires transport to dial through Grafana's secure
+// SOCKS proxy when opts.Enabled (set from the datasource's
+// jsonData.enableSecureSocksProxy, see SecureSocksProxyEnabledOnDS in the
+// SDK). It's a no-op when the proxy isn't enabled.
+func configureSecureSocksProxy(transport *http.Transport, opts *proxy.Options) error {
+	return proxy.New(opts).ConfigureSecureSocksHTTPProxy(transport)
 }
 
 func parseRoles(roleStr string) (map[string]string, error) {
