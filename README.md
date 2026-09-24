@@ -28,6 +28,8 @@ docker run -d -p 3000:3000 \
 * Macros
 * Client tags support, used to identify resource groups. Tags can be set on the data source,
   and extended with additional tags in the query editor.
+* Impersonation of the logged-in Grafana user, by login or email. Anonymous
+  users are not impersonated and run as the data source's user.
 
 ## Macros support
 
