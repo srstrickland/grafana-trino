@@ -7,7 +7,9 @@ import (
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/sqlds/v4"
+	trinoClient "github.com/trinodb/grafana-trino/pkg/trino/client"
 	"github.com/trinodb/grafana-trino/pkg/trino/models"
 )
 
@@ -38,8 +40,11 @@ func (ds *SQLDatasourceWithTrinoUserContext) QueryData(ctx context.Context, req 
 			return errorForEachQuery(req, err), nil
 		}
 
-		if user != "" {
+		if user == "" {
+			log.DefaultLogger.FromContext(ctx).Info("Not impersonating anonymous Grafana user, query runs as the data source's Trino user")
+		} else {
 			ctx = context.WithValue(ctx, trinoUserHeader, user)
+			ctx = trinoClient.WithSessionUser(ctx)
 		}
 	}
 
@@ -83,7 +88,7 @@ func impersonatedUser(user *backend.User, identity string) (string, error) {
 	if user == nil {
 		return "", fmt.Errorf("user can't be nil if impersonation is enabled")
 	}
-	if user.Login == "" {
+	if user.Login == "" && user.Email == "" {
 		return "", nil
 	}
 	if identity == models.ImpersonationIdentityEmail {
@@ -91,6 +96,9 @@ func impersonatedUser(user *backend.User, identity string) (string, error) {
 			return "", fmt.Errorf("impersonation is configured to use the user's email, but Grafana user %q has no email", user.Login)
 		}
 		return user.Email, nil
+	}
+	if user.Login == "" {
+		return "", fmt.Errorf("impersonation is configured to use the user's login, but Grafana user %q has no login", user.Email)
 	}
 	return user.Login, nil
 }

@@ -27,6 +27,8 @@ func TestImpersonatedUser(t *testing.T) {
 		{name: "email when user has no email", user: noEmail, identity: models.ImpersonationIdentityEmail, wantErr: true},
 		{name: "anonymous user is not impersonated by login", user: &backend.User{}, identity: models.ImpersonationIdentityLogin, want: ""},
 		{name: "anonymous user is not impersonated by email", user: &backend.User{}, identity: models.ImpersonationIdentityEmail, want: ""},
+		{name: "email for user without login", user: &backend.User{Email: "carol@example.com"}, identity: models.ImpersonationIdentityEmail, want: "carol@example.com"},
+		{name: "login for user without login", user: &backend.User{Email: "carol@example.com"}, identity: models.ImpersonationIdentityLogin, wantErr: true},
 		{name: "no user", user: nil, identity: models.ImpersonationIdentityLogin, wantErr: true},
 	}
 

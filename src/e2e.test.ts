@@ -237,10 +237,7 @@ test('test impersonation with user email', async ({ page }) => {
     await goToTrinoSettings(page);
     await page.getByTestId('data-testid Datasource HTTP settings url').fill('http://trino:8080');
     await page.locator('label[for="trino-settings-enable-impersonation"]').last().click();
-    // RadioButtonGroup renders its option text as a <label> on newer Grafana
-    // but not on 10.x, so target the radio itself. The input is visually
-    // hidden behind the option text, hence `force`.
-    await page.getByRole('radio', {name: 'Email'}).check({ force: true });
+    await page.getByRole('radio', {name: 'Email'}).check();
     await page.getByTestId('data-testid Data source settings page Save and Test button').click();
     await page.getByLabel(EXPORT_DATA).click();
     await setQuery(page, 'SELECT current_user AS trino_user');

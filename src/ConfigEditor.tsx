@@ -1,5 +1,5 @@
 import React, { ChangeEvent } from 'react';
-import { DataSourceHttpSettings, InlineField, InlineSwitch, SecretInput, Input, RadioButtonGroup } from '@grafana/ui';
+import { Alert, DataSourceHttpSettings, InlineField, InlineSwitch, SecretInput, Input, RadioButtonGroup } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { config } from '@grafana/runtime';
 import {
@@ -68,7 +68,7 @@ export function ConfigEditor(props: Props) {
         <div className="gf-form-inline">
           <InlineField
             label="Impersonate logged in user"
-            tooltip="If enabled, set the Trino session user to the current Grafana user. Anonymous users are not impersonated and run as the data source's user."
+            tooltip="If enabled, set the Trino session user to the current Grafana user. Anonymous users are not impersonated and run as the data source's user, or the OAuth impersonation user if set."
             labelWidth={26}
           >
             <InlineSwitch
@@ -156,6 +156,12 @@ export function ConfigEditor(props: Props) {
             <Input value={options.jsonData?.impersonationUser ?? ''} onChange={onImpersonationUserChange} width={60} />
           </InlineField>
         </div>
+        {options.jsonData?.enableImpersonation && options.jsonData?.impersonationUser && (
+          <Alert severity="warning" title="Impersonation user is only used for anonymous users">
+            &quot;Impersonate logged in user&quot; is enabled, so signed-in Grafana users run as themselves. This
+            impersonation user only applies to queries from anonymous users.
+          </Alert>
+        )}
       </div>
 
       {config.secureSocksDSProxyEnabled && (
